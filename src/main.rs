@@ -1,31 +1,25 @@
-use core::fmt;
-use std::{collections::HashMap, io::BufRead, u8};
+use std::{collections::HashMap, u8};
 
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
 };
 
+#[derive(Debug)]
 enum HttpVersion {
     Http1_1,
 }
 
-enum ParsingError {
-    Method,
-    //TokioErr(tokio::io::Error),
-    //StdErr(tokio::io::Error),
-}
-
-impl fmt::Display for ParsingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParsingError::Method => write!(f, "Cannot find expected Method"),
-            //ParsingError::TokioErr(e) => write!(f, "{e}"),
-            //ParsingError::StdErr(e) => write!(f, "{e}"),
+impl From<&String> for HttpVersion {
+    fn from(value: &String) -> Self {
+        match value.as_str() {
+            "HTTP/1.1" => HttpVersion::Http1_1,
+            _ => panic!("Cannot handle this http version"),
         }
     }
 }
 
+#[derive(Debug)]
 enum Method {
     GET,
     POST,
@@ -34,21 +28,21 @@ enum Method {
     PUT,
 }
 
-impl Method {
-    pub fn new(method: &String) -> Result<Method, ParsingError> {
-        let method = match method.as_str() {
-            "GET" => Self::GET,
-            "POST" => Self::POST,
-            "PATCH" => Self::PATCH,
-            "DELETE" => Self::DELETE,
-            "PUT" => Self::PUT,
-            _ => return Err(ParsingError::Method),
-        };
-        Ok(method)
+impl From<&String> for Method {
+    fn from(value: &String) -> Method {
+        match value.as_str() {
+            "GET" => Method::GET,
+            "POST" => Method::POST,
+            "PATCH" => Method::PATCH,
+            "DELETE" => Method::DELETE,
+            "PUT" => Method::PUT,
+            _ => panic!("Get an invalide method parameter"),
+        }
     }
 }
 
 //res: GET / HTTP/1.1   retrieve jusqua \n est split en trois
+#[derive(Debug)]
 struct Request {
     method: Method,                        // GET, POST...
     uri: String,                           // TODO! a determiner si cest tout ou juste path
@@ -61,48 +55,73 @@ struct Request {
 impl Request {
     pub async fn new(reader: &mut [u8]) -> tokio::io::Result<Request> {
         let mut buffer: Vec<u8> = vec![];
-        let mut split_input: Vec<Vec<u8>> = vec![];
+        let mut split_input: Vec<String> = vec![];
         let mut is_first_line = true;
-
-        let mut split_hash_map: HashMap<String, u8> = std::collections::HashMap::new();
 
         for char in reader.iter() {
             match *char {
-                b'\n' => {
-                    // if this is the first line split it to get the method, uri and http version
-                    //if is_first_line && buffer.len() > 0 {
-                    //    let split = buffer.split(b' ');
-                    //}
-                    // Check buffer length before push due to \r\n\r\n at the of the http request
-                    else if buffer.len() > 0 {
-                        split_input.push(buffer.clone());
+                // split method, uri and HttpVersion on the first line
+                b' ' if is_first_line => {
+                    if buffer.len() > 0 {
+                        split_input.push(
+                            String::from_utf8(buffer.clone()).expect("Contain invalide utf8"),
+                        );
                         buffer.clear();
                     }
                 }
-                b'\0' => break,
-                b'\r' => (),
+                // handle new line
+                b'\n' => {
+                    // Check buffer length before push due to \r\n\r\n at the of the http request
+                    if buffer.len() > 0 {
+                        split_input.push(
+                            String::from_utf8(buffer.clone()).expect("Contain invalide utf8"),
+                        );
+                        buffer.clear();
+                    }
+                    if is_first_line {
+                        is_first_line = false;
+                    }
+                }
 
+                // end of the buffer
+                b'\0' => break,
+                // dont push \r and \n
+                b'\r' => (),
                 _ => {
                     buffer.push(*char);
                 }
             }
         }
 
-        for input in split_input {
-            let res = String::from_utf8(input).unwrap();
-            println!("{res}");
+        let mut split_input_iter = split_input.iter();
+        let method: Method = split_input_iter.next().unwrap().into();
+        let dirty_uri = split_input_iter.next().unwrap().to_owned();
+        let version: HttpVersion = split_input_iter.next().unwrap().into();
+
+        let mut headers: HashMap<String, String> = HashMap::new();
+        for header in split_input_iter {
+            let (k, v) = header.split_once(":").unwrap();
+            headers.insert(k.into(), v.into());
         }
 
-        todo!()
+        let req = Request {
+            method,
+            uri: dirty_uri,
+            version,
+            headers,
+            path_params: HashMap::new(),
+            query_params: HashMap::new(),
+        };
+
+        //println!("{:#?}", req);
+
+        Ok(req)
     }
 }
 
 async fn process_socket(socket: &mut tokio::net::TcpStream) {
     let mut buffer = [0; 1024];
     socket.read(&mut buffer).await.unwrap();
-
-    //let res = std::str::from_utf8(&buffer).unwrap();
-    //println!("{:#?}", res);
     Request::new(&mut buffer).await.unwrap();
     let _ = socket.write_all(b"Hello World");
 }
@@ -110,7 +129,6 @@ async fn process_socket(socket: &mut tokio::net::TcpStream) {
 #[tokio::main]
 async fn main() -> tokio::io::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
-
     loop {
         let (mut socket, _) = listener.accept().await?;
         process_socket(&mut socket).await;
