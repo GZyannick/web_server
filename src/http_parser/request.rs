@@ -1,7 +1,6 @@
-//res: GET / HTTP/1.1   retrieve jusqua \n est split en trois
-
 use crate::http_parser::{method::Method, version::HttpVersion};
 use std::{collections::HashMap, u8};
+
 #[derive(Debug)]
 pub struct Request {
     pub method: Method,                        // GET, POST...
@@ -14,6 +13,23 @@ pub struct Request {
 
 impl Request {
     pub async fn new(reader: &mut [u8]) -> tokio::io::Result<Request> {
+        let split_input = Request::read_socket(reader);
+        let mut split_input_iter = split_input.iter();
+        let method: Method = split_input_iter.next().unwrap().into();
+        let uri = split_input_iter.next().unwrap().to_owned();
+        let version: HttpVersion = split_input_iter.next().unwrap().into();
+
+        Ok(Request {
+            method,
+            uri: uri.clone(),
+            version,
+            headers: Request::get_headers(split_input_iter),
+            path_params: Request::get_path_params(String::from("TODO PATH PARAMS")),
+            query_params: Request::get_query_params(&uri),
+        })
+    }
+
+    fn read_socket(reader: &mut [u8]) -> Vec<String> {
         let mut buffer: Vec<u8> = vec![];
         let mut split_input: Vec<String> = vec![];
         let mut is_first_line = true;
@@ -29,7 +45,6 @@ impl Request {
                         buffer.clear();
                     }
                 }
-                // handle new line
                 b'\n' => {
                     // Check buffer length before push due to \r\n\r\n at the of the http request
                     if buffer.len() > 0 {
@@ -52,13 +67,24 @@ impl Request {
                 }
             }
         }
+        split_input
+    }
 
-        let mut split_input_iter = split_input.iter();
-        let method: Method = split_input_iter.next().unwrap().into();
-        let uri = split_input_iter.next().unwrap().to_owned();
+    fn get_headers<'a, I>(iter: I) -> HashMap<String, String>
+    where
+        I: Iterator<Item = &'a String>,
+    {
+        let mut headers: HashMap<String, String> = HashMap::new();
+        for header in iter {
+            let (k, v) = header.split_once(":").unwrap();
+            headers.insert(k.into(), v.into());
+        }
+        headers
+    }
 
+    fn get_query_params(uri: &String) -> HashMap<String, String> {
         // get query params if exist
-        let query_params = match uri.contains("?") {
+        match uri.contains("?") {
             true => {
                 let mut query_params: HashMap<String, String> = HashMap::new();
                 let (_, params) = uri.split_once("?").unwrap();
@@ -71,27 +97,11 @@ impl Request {
                 query_params
             }
             false => HashMap::new(),
-        };
-
-        let version: HttpVersion = split_input_iter.next().unwrap().into();
-
-        let mut headers: HashMap<String, String> = HashMap::new();
-        for header in split_input_iter {
-            let (k, v) = header.split_once(":").unwrap();
-            headers.insert(k.into(), v.into());
         }
+    }
 
-        let req = Request {
-            method,
-            uri,
-            version,
-            headers,
-            path_params: HashMap::new(),
-            query_params,
-        };
-
-        println!("{:#?}", req);
-
-        Ok(req)
+    //TODO handle path params
+    fn get_path_params(method: String) -> HashMap<String, String> {
+        HashMap::new()
     }
 }

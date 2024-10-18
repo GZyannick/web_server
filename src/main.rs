@@ -9,7 +9,8 @@ use http_parser::request::Request;
 async fn process_socket(socket: &mut tokio::net::TcpStream) {
     let mut buffer = [0; 1024];
     socket.read(&mut buffer).await.unwrap();
-    Request::new(&mut buffer).await.unwrap();
+    let req = Request::new(&mut buffer).await.unwrap();
+    println!("req: {:#?}", req);
     let _ = socket.write_all(b"Hello World");
 }
 
