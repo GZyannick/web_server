@@ -6,6 +6,9 @@ use tokio::{
 mod http_parser;
 use http_parser::request::Request;
 
+mod http_response;
+use http_response::response::Response;
+
 async fn process_socket(socket: &mut tokio::net::TcpStream) {
     let mut buffer = [0; 1024];
     socket.read(&mut buffer).await.unwrap();

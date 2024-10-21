@@ -101,7 +101,7 @@ impl Request {
     }
 
     //TODO handle path params
-    fn get_path_params(method: String) -> HashMap<String, String> {
+    fn get_path_params(_method: String) -> HashMap<String, String> {
         HashMap::new()
     }
 }
