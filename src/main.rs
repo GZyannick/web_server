@@ -3,24 +3,21 @@ use tokio::{
     net::TcpListener,
 };
 
-mod http_parser;
-use http_parser::request::Request;
-
-mod http_response;
-use http_response::response::Response;
+mod http;
+use http::request::Request;
+use http::response::Response;
 
 async fn process_socket(socket: &mut tokio::net::TcpStream) {
     let mut buffer = [0; 1024];
     socket.read(&mut buffer).await.unwrap();
-    //let req = Request::new(&mut buffer).await.unwrap();
-    //println!("req: {:#?}", req);
-
+    let req = Request::new(&mut buffer).await.unwrap();
     let res = Response::new().await;
-    println!("{res}");
 
-    //let _ = socket.write_all(b"Hello World");
-
-    let _ = socket.write_all(format!("{}", res).as_bytes());
+    socket
+        .write_all(format!("{}", res).as_bytes())
+        .await
+        .unwrap();
+    socket.flush().await.unwrap();
 }
 
 #[tokio::main]

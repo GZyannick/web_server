@@ -1,5 +1,10 @@
-use crate::http_parser::{method::Method, version::HttpVersion};
+pub mod method;
+pub mod request;
+
 use std::{collections::HashMap, u8};
+
+use super::version::HttpVersion;
+use method::Method;
 
 #[derive(Debug)]
 pub struct Request {
