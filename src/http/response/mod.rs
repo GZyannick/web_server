@@ -16,22 +16,28 @@ pub struct Response {
 
 impl Response {
     pub async fn new() -> Response {
+        let (content, headers) = Self::handle_file().await;
+
+        // Exemple for now only 200
+        Response {
+            http_version: HttpVersion::Http1_1,
+            status_code: HttpStatusCode::S200,
+            headers,
+            content,
+        }
+    }
+
+    async fn handle_file() -> (String, HashMap<String, String>) {
         let mut test_content = String::new();
-        let mut file = std::fs::File::open("./test.html").unwrap();
+        let mut file = std::fs::File::open("./src/http/response/test.html").unwrap();
         file.read_to_string(&mut test_content).unwrap();
-        //let test_content = String::from("<h1>Hello World</h1>");
         let len = test_content.len();
         let mut headers: HashMap<String, String> = HashMap::new();
         if len > 0 {
             headers.insert("Content-Length".to_string(), len.to_string());
         }
-        // Exemple
-        Response {
-            http_version: HttpVersion::Http1_1,
-            status_code: HttpStatusCode::S200,
-            headers: HashMap::new(),
-            content: test_content,
-        }
+
+        (test_content, headers)
     }
 }
 

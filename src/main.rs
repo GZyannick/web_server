@@ -13,6 +13,9 @@ async fn process_socket(socket: &mut tokio::net::TcpStream) {
     let req = Request::new(&mut buffer).await.unwrap();
     let res = Response::new().await;
 
+    let res_fmt = format!("{res}");
+    println!("{:?}", res_fmt);
+
     socket
         .write_all(format!("{}", res).as_bytes())
         .await
