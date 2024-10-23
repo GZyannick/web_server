@@ -4,23 +4,23 @@ use tokio::{
 };
 
 mod http;
+use http::error::Error;
 use http::request::Request;
 use http::response::Response;
 
-async fn process_socket(socket: &mut tokio::net::TcpStream) {
+async fn process_socket(socket: &mut tokio::net::TcpStream) -> Result<(), Error> {
     let mut buffer = [0; 1024];
-    socket.read(&mut buffer).await.unwrap();
-    let req = Request::new(&mut buffer).await.unwrap();
-    let res = Response::new().await;
+    socket.read(&mut buffer).await?;
+    let _req = Request::new(&mut buffer).await?;
+    let res = Response::new().await?;
 
-    let res_fmt = format!("{res}");
-    println!("{:?}", res_fmt);
+    //let res_fmt = format!("{res}");
+    //println!("{:?}", res_fmt);
 
-    socket
-        .write_all(format!("{}", res).as_bytes())
-        .await
-        .unwrap();
-    socket.flush().await.unwrap();
+    socket.write_all(format!("{}", res).as_bytes()).await?;
+    socket.flush().await?;
+
+    Ok(())
 }
 
 #[tokio::main]

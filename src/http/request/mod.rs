@@ -1,8 +1,8 @@
 pub mod method;
-pub mod request;
 
 use std::{collections::HashMap, u8};
 
+use super::error::Error;
 use super::version::HttpVersion;
 use method::Method;
 
@@ -17,8 +17,8 @@ pub struct Request {
 }
 
 impl Request {
-    pub async fn new(reader: &mut [u8]) -> tokio::io::Result<Request> {
-        let split_input = Request::read_socket(reader);
+    pub async fn new(reader: &mut [u8]) -> Result<Request, Error> {
+        let split_input = Request::read_socket(reader)?;
         let mut split_input_iter = split_input.iter();
         let method: Method = split_input_iter.next().unwrap().into();
         let uri = split_input_iter.next().unwrap().to_owned();
@@ -34,7 +34,7 @@ impl Request {
         })
     }
 
-    fn read_socket(reader: &mut [u8]) -> Vec<String> {
+    fn read_socket(reader: &mut [u8]) -> Result<Vec<String>, Error> {
         let mut buffer: Vec<u8> = vec![];
         let mut split_input: Vec<String> = vec![];
         let mut is_first_line = true;
@@ -44,18 +44,14 @@ impl Request {
                 // split method, uri and HttpVersion on the first line
                 b' ' if is_first_line => {
                     if buffer.len() > 0 {
-                        split_input.push(
-                            String::from_utf8(buffer.clone()).expect("Contain invalide utf8"),
-                        );
+                        split_input.push(String::from_utf8(buffer.clone())?);
                         buffer.clear();
                     }
                 }
                 b'\n' => {
                     // Check buffer length before push due to \r\n\r\n at the of the http request
                     if buffer.len() > 0 {
-                        split_input.push(
-                            String::from_utf8(buffer.clone()).expect("Contain invalide utf8"),
-                        );
+                        split_input.push(String::from_utf8(buffer.clone())?);
                         buffer.clear();
                     }
                     if is_first_line {
@@ -72,7 +68,7 @@ impl Request {
                 }
             }
         }
-        split_input
+        Ok(split_input)
     }
 
     fn get_headers<'a, I>(iter: I) -> HashMap<String, String>

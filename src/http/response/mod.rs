@@ -3,6 +3,7 @@ pub mod status_code;
 
 use std::{collections::HashMap, io::Read};
 
+use super::error::Error;
 use super::version::HttpVersion;
 //use content_types::ContentType;
 use status_code::HttpStatusCode;
@@ -15,29 +16,28 @@ pub struct Response {
 }
 
 impl Response {
-    pub async fn new() -> Response {
-        let (content, headers) = Self::handle_file().await;
-
+    pub async fn new() -> Result<Response, Error> {
+        let (content, headers) = Self::handle_file().await?;
         // Exemple for now only 200
-        Response {
+        Ok(Response {
             http_version: HttpVersion::Http1_1,
             status_code: HttpStatusCode::S200,
             headers,
             content,
-        }
+        })
     }
 
-    async fn handle_file() -> (String, HashMap<String, String>) {
+    async fn handle_file() -> Result<(String, HashMap<String, String>), Error> {
         let mut test_content = String::new();
-        let mut file = std::fs::File::open("./src/http/response/test.html").unwrap();
-        file.read_to_string(&mut test_content).unwrap();
+        let mut file = std::fs::File::open("./src/http/response/test.html")?;
+        file.read_to_string(&mut test_content)?;
         let len = test_content.len();
         let mut headers: HashMap<String, String> = HashMap::new();
         if len > 0 {
             headers.insert("Content-Length".to_string(), len.to_string());
         }
 
-        (test_content, headers)
+        Ok((test_content, headers))
     }
 }
 
