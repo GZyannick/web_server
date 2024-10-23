@@ -15,7 +15,7 @@ async fn handler(socket: &mut tokio::net::TcpStream) -> Result<(), Error> {
     socket.read(&mut buffer).await?;
     let _req = Request::new(&mut buffer).await?;
 
-    let res = Response::new(HttpVersion::Http1_1, HttpStatusCode::S200, HashMap::new()).await?;
+    let res = Response::new(HttpVersion::Http1_1, HttpStatusCode::Ok, HashMap::new()).await?;
 
     socket.write_all(format!("{}", res).as_bytes()).await?;
     socket.flush().await?;
@@ -31,3 +31,14 @@ async fn main() -> Result<(), Error> {
         handler(&mut socket).await?;
     }
 }
+
+/*
+* TODO
+*
+*  User defined handler
+*
+*  MiddleWare (Multi Thread i guess)
+*
+*  Radix tree routing
+*
+*/
