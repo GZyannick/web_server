@@ -13,7 +13,7 @@ use http::{error::Error, response::status_code::HttpStatusCode, version::HttpVer
 async fn handler(socket: &mut tokio::net::TcpStream) -> Result<(), Error> {
     let mut buffer = [0; 1024];
     socket.read(&mut buffer).await?;
-    let _req = Request::new(&mut buffer).await?;
+    let req = Request::new(&mut buffer).await?;
 
     let res = Response::new(HttpVersion::Http1_1, HttpStatusCode::Ok, HashMap::new()).await?;
 
@@ -27,6 +27,7 @@ async fn handler(socket: &mut tokio::net::TcpStream) -> Result<(), Error> {
 async fn main() -> Result<(), Error> {
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
     loop {
+        // socket belong to client and dropped when response is send
         let (mut socket, _) = listener.accept().await?;
         handler(&mut socket).await?;
     }
@@ -35,10 +36,10 @@ async fn main() -> Result<(), Error> {
 /*
 * TODO
 *
-*  User defined handler
+*  User defined handler[_]  Not sure if needed
 *
-*  MiddleWare (Multi Thread i guess)
+*  MiddleWare (Multi Thread i guess)[_]
 *
-*  Radix tree routing
+*  Radix tree routing[_]
 *
 */

@@ -1,4 +1,4 @@
-#[warn(unused, dead_code)]
+#[warn(dead_code)]
 pub enum HttpStatusCode {
     Ok,
     Created,
