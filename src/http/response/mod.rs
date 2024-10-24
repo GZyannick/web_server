@@ -8,31 +8,40 @@ use super::version::HttpVersion;
 //use content_types::ContentType;
 use status_code::HttpStatusCode;
 
+#[derive(Debug, Clone)]
 pub struct Response {
     http_version: HttpVersion,
     status_code: HttpStatusCode,
     headers: HashMap<String, String>,
-    content: String,
+    content: &'static str,
 }
 
 impl Response {
     pub async fn new(
-        http_version: HttpVersion,
         status_code: HttpStatusCode,
         mut headers: HashMap<String, String>,
+        content: &'static str,
     ) -> Result<Response, Error> {
-        let content = Self::handle_file().await?;
         let len = content.len();
         if len > 0 {
             headers.insert("Content-Length".to_string(), len.to_string());
         }
 
         Ok(Response {
-            http_version,
+            http_version: HttpVersion::Http1_1,
             status_code,
             headers,
             content,
         })
+    }
+
+    pub async fn not_found() -> Response {
+        Response {
+            http_version: HttpVersion::Http1_1,
+            status_code: HttpStatusCode::NotFound,
+            headers: HashMap::new(),
+            content: "404 Not Found",
+        }
     }
 
     async fn handle_file() -> Result<String, Error> {
