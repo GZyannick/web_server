@@ -29,7 +29,7 @@ impl Request {
             uri: uri.clone(),
             version,
             headers: Request::get_headers(split_input_iter),
-            path_params: Request::get_path_params(String::from("TODO PATH PARAMS")),
+            path_params: HashMap::new(),
             query_params: Request::get_query_params(&uri),
         })
     }
@@ -99,10 +99,5 @@ impl Request {
             }
             false => HashMap::new(),
         }
-    }
-
-    //TODO handle path params
-    fn get_path_params(_method: String) -> HashMap<String, String> {
-        HashMap::new()
     }
 }

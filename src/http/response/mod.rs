@@ -19,14 +19,18 @@ pub struct Response {
 impl Response {
     pub async fn new(
         status_code: HttpStatusCode,
-        mut headers: HashMap<String, String>,
+        headers: Option<HashMap<String, String>>,
         content: &'static str,
     ) -> Result<Response, Error> {
+        let mut headers: HashMap<String, String> = match headers {
+            Some(headers) => headers,
+            None => HashMap::new(),
+        };
+
         let len = content.len();
         if len > 0 {
             headers.insert("Content-Length".to_string(), len.to_string());
         }
-
         Ok(Response {
             http_version: HttpVersion::Http1_1,
             status_code,

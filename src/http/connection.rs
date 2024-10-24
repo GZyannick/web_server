@@ -10,13 +10,16 @@ impl Connection {
         let mut buffer = [0; 1024];
         socket.read(&mut buffer).await?;
         let req = Request::new(&mut buffer).await?;
-
         Ok(Connection { req, socket })
     }
 
     pub async fn respond<'a>(&mut self, router: &'a Router) -> Result<(), Error> {
         match router.root.find(&self.req.uri) {
-            Some((res, _)) => {
+            Some((res, path_params)) => {
+                // add path_parameter to request
+                for (k, v) in path_params.params_iter() {
+                    self.req.path_params.insert(k.to_string(), v.to_string());
+                }
                 self.socket.write_all(format!("{}", res).as_bytes()).await?;
             }
             None => {

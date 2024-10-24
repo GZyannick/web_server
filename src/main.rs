@@ -8,16 +8,13 @@ use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let mut router = Router::new(
-        "/",
-        Response::new(HttpStatusCode::Ok, HashMap::new(), "Home").await?,
-    )
-    .await?;
-
-    let _ = router.insert(
-        "/hello",
-        Response::new(HttpStatusCode::Ok, HashMap::new(), "Hello World").await?,
-    );
+    let mut router = Router::new("/", HttpStatusCode::Ok, None, "Home").await?;
+    router
+        .insert("/hello", HttpStatusCode::Ok, None, "Hello World")
+        .await?;
+    router
+        .insert("/user/:user", HttpStatusCode::Ok, None, "Hello_User")
+        .await?;
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await?;
     loop {
